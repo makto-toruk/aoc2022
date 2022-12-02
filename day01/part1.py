@@ -12,12 +12,10 @@ def main(argv: Sequence[str] | None = None) -> int | None:
     inventory = args.input.read().splitlines()
     inventory.append("")
 
-    budget = []
     elf_sum = 0
     max_calories = 0
     for item in inventory:
         if item == "":
-            budget.append(elf_sum)
             if elf_sum > max_calories:
                 max_calories = elf_sum
             elf_sum = 0

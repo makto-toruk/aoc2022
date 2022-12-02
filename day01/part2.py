@@ -29,12 +29,10 @@ def main(argv: Sequence[str] | None = None) -> int | None:
     inventory = args.input.read().splitlines()
     inventory.append("")
 
-    budget = []
     elf_sum = 0
     top_three = [0, 0, 0]  # [least, intermediate, highest]
     for item in inventory:
         if item == "":
-            budget.append(elf_sum)
             top_three = insert(elf_sum, top_three)
             elf_sum = 0
         else:
