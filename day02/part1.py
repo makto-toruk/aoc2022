@@ -3,37 +3,26 @@ from __future__ import annotations
 import argparse
 from typing import Sequence
 
-ROCK = "Rock"
-PAPER = "Paper"
-SCISSORS = "Scissors"
-DECODER = {
-    "A": ROCK,
-    "B": PAPER,
-    "C": SCISSORS,
-    "X": ROCK,
-    "Y": PAPER,
-    "Z": SCISSORS,
+decoder = {
+    "A": "R",
+    "B": "P",
+    "C": "S",
+    "X": "R",
+    "Y": "P",
+    "Z": "S",
 }
-SCORE = {ROCK: 1, PAPER: 2, SCISSORS: 3}
+score = {"R": 1, "P": 2, "S": 3}
+lose = {"R": "S", "P": "R", "S": "P"}
 
 
 def compute_outcome(elf: str, you: str) -> int:
 
     if elf == you:
         return 3
-    elif (
-        (elf == ROCK and you == SCISSORS)
-        or (elf == PAPER and you == ROCK)
-        or (elf == SCISSORS and you == PAPER)
-    ):
+    elif you == lose[elf]:
         return 0
     else:
         return 6
-
-
-def compute_score(elf: str, you: str) -> int:
-
-    return compute_outcome(elf, you) + SCORE[you]
 
 
 def main(argv: Sequence[str] | None = None) -> int | None:
@@ -43,11 +32,13 @@ def main(argv: Sequence[str] | None = None) -> int | None:
     args = parser.parse_args(argv)
     rounds = [a.split() for a in args.input.read().splitlines()]
 
-    score = 0
+    n = 0
     for round in rounds:
-        score += compute_score(DECODER[round[0]], DECODER[round[1]])
+        elf = decoder[round[0]]
+        you = decoder[round[1]]
+        n += compute_outcome(elf, you) + score[you]
 
-    print(score)
+    print(n)
 
     return 0
 
