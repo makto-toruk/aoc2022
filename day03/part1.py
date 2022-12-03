@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 import argparse
-from typing import Sequence
+import os
+
+import pytest
+
+INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
 
 def priority(s: str) -> int:
 
     if s.islower():
-        return ord(s) - 96
+        return ord(s) - ord("a") + 1
     else:
-        return ord(s) - 64 + 26
+        return ord(s) - ord("A") + 26 + 1
 
 
-def main(argv: Sequence[str] | None = None) -> int | None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=argparse.FileType("r"), required=True)
+def compute(input: str) -> int:
 
-    args = parser.parse_args(argv)
-    rucksacks = args.input.read().splitlines()
+    rucksacks = input.splitlines()
 
     n = 0
     for r in rucksacks:
@@ -26,7 +27,35 @@ def main(argv: Sequence[str] | None = None) -> int | None:
         right = r[l // 2 :]
         n += priority(list(set(left).intersection(set(right)))[0])
 
-    print(n)
+    return n
+
+
+INPUT_S = """\
+vJrwpWtwJgWrhcsFMMfFFhFp
+jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+PmmdzqPrVvPwwTWBwg
+wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+ttgJtRGJQctTZtZT
+CrZsJsPPZsGzwwsLwLmpwMDw
+"""
+EXPECTED = 157
+
+
+@pytest.mark.parametrize(
+    ("input_s", "expected"),
+    ((INPUT_S, EXPECTED),),
+)
+def test(input_s: str, expected: int) -> None:
+    assert compute(input_s) == expected
+
+
+def main() -> int | None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", default=INPUT_TXT)
+    args = parser.parse_args()
+
+    with open(args.input) as f:
+        print(compute(f.read()))
 
     return 0
 

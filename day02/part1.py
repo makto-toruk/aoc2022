@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import argparse
-from typing import Sequence
+import os
+
+import pytest
+
+INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
 decoder = {
     "A": "R",
@@ -25,12 +29,9 @@ def compute_outcome(elf: str, you: str) -> int:
         return 6
 
 
-def main(argv: Sequence[str] | None = None) -> int | None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=argparse.FileType("r"), required=True)
+def compute(input: str) -> int:
 
-    args = parser.parse_args(argv)
-    rounds = [a.split() for a in args.input.read().splitlines()]
+    rounds = [a.split() for a in input.splitlines()]
 
     n = 0
     for round in rounds:
@@ -38,7 +39,32 @@ def main(argv: Sequence[str] | None = None) -> int | None:
         you = decoder[round[1]]
         n += compute_outcome(elf, you) + score[you]
 
-    print(n)
+    return n
+
+
+INPUT_S = """\
+A Y
+B X
+C Z
+"""
+EXPECTED = 15
+
+
+@pytest.mark.parametrize(
+    ("input_s", "expected"),
+    ((INPUT_S, EXPECTED),),
+)
+def test(input_s: str, expected: int) -> None:
+    assert compute(input_s) == expected
+
+
+def main() -> int | None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", default=INPUT_TXT)
+    args = parser.parse_args()
+
+    with open(args.input) as f:
+        print(compute(f.read()))
 
     return 0
 

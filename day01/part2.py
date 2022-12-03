@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import argparse
-from typing import Sequence
+import os
+
+import pytest
+
+INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
 
 def insert(item: int, top_three: list[int]) -> list[int]:
@@ -21,12 +25,8 @@ def insert(item: int, top_three: list[int]) -> list[int]:
     return top_three[1:]
 
 
-def main(argv: Sequence[str] | None = None) -> int | None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=argparse.FileType("r"), required=True)
-
-    args = parser.parse_args(argv)
-    inventory = args.input.read().splitlines()
+def compute(input: str) -> int:
+    inventory = input.splitlines()
     inventory.append("")
 
     elf_sum = 0
@@ -38,9 +38,45 @@ def main(argv: Sequence[str] | None = None) -> int | None:
         else:
             elf_sum += int(item)
 
-    print(sum(top_three))
+    return sum(top_three)
 
-    return 1
+
+INPUT_S = """\
+1000
+2000
+3000
+
+4000
+
+5000
+6000
+
+7000
+8000
+9000
+
+10000
+"""
+EXPECTED = 45000
+
+
+@pytest.mark.parametrize(
+    ("input_s", "expected"),
+    ((INPUT_S, EXPECTED),),
+)
+def test(input_s: str, expected: int) -> None:
+    assert compute(input_s) == expected
+
+
+def main() -> int | None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", default=INPUT_TXT)
+    args = parser.parse_args()
+
+    with open(args.input) as f:
+        print(compute(f.read()))
+
+    return 0
 
 
 if __name__ == "__main__":
