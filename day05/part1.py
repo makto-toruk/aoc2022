@@ -23,7 +23,7 @@ def compute(input: str) -> str:
             blocks.append(x)
 
     n_stacks = max(grid)
-    stacks = {k: [] for k in range(n_stacks)}
+    stacks = [[] for k in range(n_stacks)]
     for block in blocks[::-1]:
         for i, s in enumerate(block):
             if (i - 1) % 4 == 0 and s != " ":
@@ -40,8 +40,8 @@ def compute(input: str) -> str:
         t += gather
 
     n = ""
-    for l in range(n_stacks):
-        n += stacks[l].pop()
+    for s in stacks:
+        n += s.pop()
 
     return n
 
