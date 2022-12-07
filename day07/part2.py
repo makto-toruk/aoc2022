@@ -8,73 +8,93 @@ import pytest
 INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
 
-def get_dirsum(subtree):
-
-    sum = 0
-    for _, v in subtree.items():
-        if isinstance(v, int):
-            sum += v
-        else:
-            sum += get_dirsum(v)
-
-    return sum
+class Object:
+    def __init__(self, name: str, parent: Dir, size: int) -> None:
+        self.name = name
+        self.parent = parent
+        self.size = size
 
 
-def parse_subtrees(tree):
+class Dir:
+    def __init__(
+        self,
+        name: str,
+        parent: Dir | None,
+        children: set[Dir | Object] = set(),
+        size: int = 0,
+    ) -> None:
+        self.name = name
+        self.parent = parent
+        self.children = children
+        self.size = size
 
-    for v in tree.values():
-        yield v
-        if isinstance(v, dict):
-            yield from parse_subtrees(v)
+    def add_size(self, size):
+        self.size += size
+
+    def __str__(self) -> str:
+        cs = None
+        if len(self.children) > 0:
+            cs = [c.name for c in self.children]
+        s = f"""
+        name: {self.name}
+        parent: {self.parent.name if self.parent else None}
+        children: {cs}
+        size: {self.size}
+        """
+        return s
+
+
+def parse_directories(dir):
+
+    for c in dir.children:
+        if isinstance(c, Dir):
+            yield c.size
+            yield from parse_directories(c)
 
 
 def compute(input: str) -> int:
 
     xs = input.splitlines()
 
-    tree = {"/": {}}
-    history = ["/"]
+    home = Dir("/", None)
     for x in xs:
         if x.startswith("$ cd"):
             _, y = x.split("$ cd ")
             if y == "/":
-                head = "/"
-                subtree = tree[head]
-                history = ["/"]
-                tree_history = [subtree]
+                pwd = home
             elif y == "..":
-                head = history[-2]
-                history = history[:-1]
-                subtree = tree_history[-2]
-                tree_history = tree_history[:-1]
+                pwd = pwd.parent
             else:
-                if y not in subtree:
-                    subtree[y] = {}
-                history.append(y)
-                tree_history.append(subtree[y])
-                head = y
-                subtree = subtree[head]
+                for c in pwd.children:
+                    if c.name == y:
+                        pwd = c
+                        continue
         elif x.startswith("$ ls"):
             continue
+        elif x.startswith("dir"):
+            c = x.split(" ")[1]
+            pwd.children.add(Dir(c, pwd, set()))
         else:
-            a, b = x.split(" ")
-            if a.isnumeric():
-                subtree[b] = int(a)
+            size, name = x.split(" ")
+            if size.isnumeric():
+                size = int(size)
+                pwd.children.add(Object(name, pwd, size))
+
+                pwd.add_size(size)
+                cwd = pwd
+                while cwd.parent:
+                    cwd.parent.add_size(size)
+                    cwd = cwd.parent
             else:
-                if b not in subtree:
-                    subtree[b] = {}
+                raise ValueError(f"{x}: not valid")
 
-    dir_sum = []
-    for x in parse_subtrees(tree):
-        if isinstance(x, dict):
-            dir_sum.append(get_dirsum(x))
+    sizes = list(parse_directories(home)) + [home.size]
 
-    total = max(dir_sum)
-    unused_space = 70000000 - total
-    min_unused_space = 30000000
-    to_delete = min_unused_space - unused_space
+    unused = 70000000 - home.size
+    required = 30000000
+    to_delete = required - unused
 
-    return min([s for s in dir_sum if s >= to_delete])
+    return min([s for s in sizes if s >= to_delete])
 
 
 INPUT_S = """\
