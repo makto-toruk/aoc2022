@@ -20,29 +20,18 @@ def scenic_score(i, j, X):
         right = X[i + 1 :, j]
         up = X[i, :j][::-1]
         down = X[i, j + 1 :]
+        dirs = [left, right, up, down]
 
-        L = 0
-        for t in left:
-            L += 1
-            if t >= h:
-                break
-        R = 0
-        for t in right:
-            R += 1
-            if t >= h:
-                break
-        U = 0
-        for t in up:
-            U += 1
-            if t >= h:
-                break
-        D = 0
-        for t in down:
-            D += 1
-            if t >= h:
-                break
+        score = 1
+        for dir in dirs:
+            s = 0
+            for t in dir:
+                s += 1
+                if t >= h:
+                    break
+            score *= s
 
-    return L * R * U * D
+    return score
 
 
 def compute(input: str) -> int:
