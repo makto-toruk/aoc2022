@@ -12,23 +12,27 @@ def compute(input: str) -> int:
 
     xs = input.splitlines()
 
-    X = [1]
+    X = 1
+    cycle = 1
+    cycles = [20, 60, 100, 140, 180, 220]
+    n = 0
     for x in xs:
         if x == "noop":
-            X.append(X[-1])
+            cycle += 1
+            if cycle in cycles:
+                n += X * cycle
         else:
             mag = int(x.split()[1])
-            X.append(X[-1])
-            X.append(X[-1] + mag)
+            cycle += 1
+            if cycle in cycles:
+                n += X * cycle
 
-    return (
-        20 * X[20 - 1]
-        + 60 * X[60 - 1]
-        + 100 * X[100 - 1]
-        + 140 * X[140 - 1]
-        + 180 * X[180 - 1]
-        + 220 * X[220 - 1]
-    )
+            cycle += 1
+            X += mag
+            if cycle in cycles:
+                n += X * cycle
+
+    return n
 
 
 INPUT_S = """\

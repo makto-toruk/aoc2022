@@ -9,42 +9,51 @@ import pytest
 INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
 
+def matrix_to_string(Y):
+
+    string = ""
+    for y in Y:
+        for x in y:
+            string += x
+        string += "\n"
+
+    return string
+
+
 def update(cycle, X, XS):
 
-    pos = X[-1]
-    x = (cycle - 1) % 40
-    y = (cycle - 1) // 40
+    x = (cycle) % 40
+    y = (cycle) // 40
 
-    if x in [pos - 1, pos, pos + 1]:
+    if x in [X - 1, X, X + 1]:
         XS[y, x] = "#"
 
     return XS
 
 
-def compute(input: str) -> int:
+def compute(input: str) -> str:
 
     xs = input.splitlines()
 
-    X = [1]
-    XS = np.array([[""] * 40] * 6)
-    cycle = len(X)
+    X = 1
+    XS = np.array([["."] * 40] * 6)
+    X = 1
+    cycle = 0
     XS = update(cycle, X, XS)
-
     for x in xs:
         if x == "noop":
-            X.append(X[-1])
-            cycle = len(X)
+            cycle += 1
             XS = update(cycle, X, XS)
         else:
             mag = int(x.split()[1])
-            X.append(X[-1])
-            cycle = len(X)
-            XS = update(cycle, X, XS)
-            X.append(X[-1] + mag)
-            cycle = len(X)
+            cycle += 1
             XS = update(cycle, X, XS)
 
-    return XS
+            cycle += 1
+            X += mag
+            XS = update(cycle, X, XS)
+
+    return matrix_to_string(XS)
 
 
 INPUT_S = """\
@@ -195,14 +204,21 @@ noop
 noop
 noop
 """
-EXPECTED = 13140
+EXPECTED = """\
+##..##..##..##..##..##..##..##..##..##..
+###...###...###...###...###...###...###.
+####....####....####....####....####....
+#####.....#####.....#####.....#####.....
+######......######......######......####
+#######.......#######.......#######.....
+"""
 
 
 @pytest.mark.parametrize(
     ("input_s", "expected"),
     ((INPUT_S, EXPECTED),),
 )
-def test(input_s: str, expected: int) -> None:
+def test(input_s: str, expected: str) -> None:
     assert compute(input_s) == expected
 
 
