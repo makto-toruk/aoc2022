@@ -43,13 +43,13 @@ def min_length(X, s):
     curr = s
     visited = set()
 
-    while X[curr] != "E":
+    while X[curr] != "S" and X[curr] != "a":
         visited.add(curr)
         ps = get_adjacent(curr[0], curr[1], X)
         d = dist[curr]
 
         for p in ps:
-            if cord(X[p]) <= cord(X[curr]) + 1:
+            if cord(X[p]) >= cord(X[curr]) - 1:
                 distance = 1 + d
                 if p not in dist:
                     dist[p] = distance
@@ -77,14 +77,10 @@ def compute(input: str) -> int:
         X.append([c for c in x])
 
     X = np.array(X)
-    S = []
-    i_s, j_s = np.where((X == "a") | (X == "S"))
-    for i, j in zip(i_s, j_s):
-        S.append((i, j))
+    e = np.where(X == "E")
+    E = (e[0][0], e[1][0])
 
-    paths = [min_length(X, p) for p in S]
-
-    return min(paths)
+    return min_length(X, E)
 
 
 INPUT_S = """\
