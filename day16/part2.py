@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 from dataclasses import dataclass
+from functools import lru_cache
 
 import pytest
 
@@ -10,84 +11,42 @@ import support
 
 INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
-DP = {}
-
 
 @dataclass
 class Valve:
     i: int
     rate: int
     connects: list[str]
-    # open: bool = False
 
 
-def step(
-    player1: str,
-    player2: str,
-    t: int,
-    valves: dict[str, Valve],
-    opened: tuple[int],
-):
+# easier than storing a DP dict (and seems much faster)
+@lru_cache(maxsize=None)
+def step(curr: str, t: int, opened: tuple[int]):
 
-    if t == 26:
+    if t == 0:
         return 0
-
-    player1, player2 = min(player1, player2), max(player1, player2)
-
-    if (player1, player2, t, opened) in DP:
-        return DP[(player1, player2, t, opened)]
+    if t == 26:
+        curr = "AA"
 
     pressure = 0
-    for v in valves.values():
-        if opened[v.i]:
-            pressure += v.rate
+    # move
+    move = []
+    for node in valves[curr].connects:
+        move.append(step(node, t - 1, opened))
+    move = max(move)
 
-    if all(opened[v.i] for v in valves.values() if v.rate > 0):
-        pressure += step(player1, player2, t + 1, valves, opened)
+    # open
+    open = 0
+    if not opened[valves[curr].i] and valves[curr].rate > 0:
 
-    else:
-        # move, move
-        move_move = []
-        for node_1 in valves[player1].connects:
-            for node_2 in valves[player2].connects:
-                move_move.append(step(node_1, node_2, t + 1, valves, opened))
+        rt = t - 26 if t > 26 else t
+        new_opened = list(opened)
+        new_opened[valves[curr].i] = 1
+        open = (rt - 1) * valves[curr].rate + step(
+            curr, t - 1, tuple(new_opened)
+        )
 
-        move_move = max(move_move)
-
-        # move, open
-        move_open = 0
-        for node_1 in valves[player1].connects:
-            if not opened[valves[player2].i] and valves[player2].rate > 0:
-                new_opened = list(opened)
-                new_opened[valves[player2].i] = 1
-                move_open = max(
-                    move_open,
-                    step(node_1, player2, t + 1, valves, tuple(new_opened)),
-                )
-
-        # open, move
-        open_move = 0
-        for node_2 in valves[player2].connects:
-            if not opened[valves[player1].i] and valves[player1].rate > 0:
-                new_opened = list(opened)
-                new_opened[valves[player1].i] = 1
-                open_move = max(
-                    open_move,
-                    step(player1, node_2, t + 1, valves, tuple(new_opened)),
-                )
-
-        # open, open
-        open = 0
-        if not opened[valves[player1].i] and valves[player1].rate > 0:
-            if not opened[valves[player2].i] and valves[player2].rate > 0:
-                new_opened = list(opened)
-                new_opened[valves[player1].i] = 1
-                new_opened[valves[player2].i] = 1
-                open = step(player1, player2, t + 1, valves, tuple(new_opened))
-
-        pressure += max(move_move, move_open, open_move, open)
-
-    DP[(player1, player2, t, opened)] = pressure
+    pressure += max(open, move)
 
     return pressure
 
@@ -109,16 +68,16 @@ def compute(input: str) -> int:
 
     xs = input.splitlines()
 
+    global valves
     valves = {}
     for i, x in enumerate(xs):
         name, rate, connects = parse(x)
         valves[name] = Valve(i=i, rate=rate, connects=connects)
 
-    print(valves)
-
-    t = 0
+    curr = "AA"
+    t = 52
     opened = tuple([0] * len(valves))
-    max_pressure = step("AA", "AA", t, valves, opened)
+    max_pressure = step(curr, t, opened)
 
     return max_pressure
 
