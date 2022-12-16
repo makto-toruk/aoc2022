@@ -147,3 +147,11 @@ def submit_25_pt2() -> int:
     else:
         print(contents)
         return 1
+
+
+def lmap(func, *iterables):
+    return list(map(func, *iterables))
+
+
+def ints(s):
+    return lmap(int, re.findall(r"-?\d+", s))
