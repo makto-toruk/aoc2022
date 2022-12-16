@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 import pytest
 
@@ -20,8 +20,8 @@ class Valve:
 
 
 # easier than storing a DP dict (and seems much faster)
-@lru_cache(maxsize=None)
-def step(curr: str, t: int, opened: tuple[int]):
+@cache
+def DP(curr: str, t: int, opened: tuple[int]):
 
     if t == 0:
         return 0
@@ -30,7 +30,7 @@ def step(curr: str, t: int, opened: tuple[int]):
     # move
     move = []
     for node in valves[curr].connects:
-        move.append(step(node, t - 1, opened))
+        move.append(DP(node, t - 1, opened))
     move = max(move)
 
     # open
@@ -38,7 +38,7 @@ def step(curr: str, t: int, opened: tuple[int]):
     if not opened[valves[curr].i] and valves[curr].rate > 0:
         new_opened = list(opened)
         new_opened[valves[curr].i] = 1
-        open = (t - 1) * valves[curr].rate + step(
+        open = (t - 1) * valves[curr].rate + DP(
             curr, t - 1, tuple(new_opened)
         )
 
@@ -73,7 +73,7 @@ def compute(input: str) -> int:
     curr = "AA"
     t = 30
     opened = tuple([0] * len(valves))
-    max_pressure = step(curr, t, opened)
+    max_pressure = DP(curr, t, opened)
 
     return max_pressure
 
