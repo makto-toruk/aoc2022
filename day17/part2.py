@@ -134,8 +134,7 @@ def simulate(i, cs, add):
         if (i % 5, j, frozenset(skyline)) in SKYLINES:
             i_prev, height_prev = SKYLINES[(i % 5, j, frozenset(skyline))]
             period = i - i_prev
-            height_curr = get_max_height(cs)
-            height_diff = height_curr - height_prev
+            height_diff = ymax - height_prev
             n_period = (N_ROCKS - i) // period
             i += n_period * period
             add += n_period * height_diff
