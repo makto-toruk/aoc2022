@@ -46,11 +46,6 @@ def geodes(
 ) -> int:
 
     if t == T:
-        # if b.id == 1:
-        #     print(t)
-        #     print(resources)
-        #     print(robots)
-        #     print(b)
         return resources.geode + robots.geode
 
     max_ore = max(
@@ -204,7 +199,7 @@ def compute(input: str) -> int:
 
     with Pool(processes=8) as pool:
         gs = []
-        for b in bs[1:3]:
+        for b in bs[:3]:
             print(b)
             gs.append(pool.apply_async(geodes, b))
 
@@ -220,7 +215,7 @@ INPUT_S = """\
 Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
 Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.
 """
-EXPECTED = 33
+EXPECTED = 62 * 56
 
 
 @pytest.mark.parametrize(
