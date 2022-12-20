@@ -3,7 +3,7 @@ https://adventofcode.com/2022
 
 # setup
 ```
-python -m venv aoc2022/aocenv
+python -m venv aocenv
 source aocenv/bin/activate
 pip install -r requirements.txt
 ```
