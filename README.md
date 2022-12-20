@@ -3,8 +3,7 @@ https://adventofcode.com/2022
 
 # setup
 ```
-python -m venv /home/$USER/pandora/aoc2022/aocenv
-alias aocenv='source /home/$USER/pandora/aoc2022/aocenv/bin/activate'
-aocenv
+python -m venv aoc2022/aocenv
+source aocenv/bin/activate
 pip install -r requirements.txt
 ```
