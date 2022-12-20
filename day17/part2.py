@@ -1,179 +1,254 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import os
-from itertools import cycle
+from dataclasses import dataclass
+from functools import cache, cached_property
+from multiprocessing import Pool
 
 import pytest
 
+import support
+
 INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
 
+T = 32
 
-ROCKS = [
-    set([(0, 0), (1, 0), (2, 0), (3, 0)]),  # -
-    set([(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)]),  # +
-    set([(0, 0), (1, 0), (2, 0), (2, 1), (2, 2)]),  # L
-    set([(0, 0), (0, 1), (0, 2), (0, 3)]),  # I
-    set([(0, 0), (1, 0), (1, 1), (0, 1)]),  # O
-]
-N_ROCKS = 1_000_000_000_000
-SKYLINES = {}
+GEODE = "geode"
+OBSIDIAN = "obsidian"
+CLAY = "clay"
+ORE = "ore"
 
 
-def show_cave(cs: set[tuple[int, int]]) -> None:
-    xmin = min(x for x, _ in cs)
-    xmax = max(x for x, _ in cs)
-    ymin = min(y for _, y in cs)
-    ymax = max(y for _, y in cs)
-    s = "\n".join(
-        "".join("#" if (x, y) in cs else "." for x in range(xmin, xmax + 1))
-        for y in range(ymax, ymin - 1, -1)
-    )
+@dataclass(unsafe_hash=True)
+class Inventory:
+    ore: int = 0
+    clay: int = 0
+    obsidian: int = 0
+    geode: int = 0
 
-    print(s)
+    def add(self, other: Inventory, b: Blueprint, t: int) -> Inventory:
+        """
+        Clip to max resources that can be consumed. Helps reduce caching space.
+        """
+        rmax = b.max_inventory
 
-    return None
+        return Inventory(
+            ore=min(self.ore + other.ore, rmax.ore * (T - t)),
+            clay=min(self.clay + other.clay, rmax.clay * (T - t)),
+            obsidian=min(
+                self.obsidian + other.obsidian, rmax.obsidian * (T - t)
+            ),
+            geode=self.geode + other.geode,
+        )
 
-
-def blocked(rs: set[tuple[int, int]], cs: set[tuple[int, int]], d: str):
-
-    match d:
-        case "<":
-            if cs:
-                for rx, ry in rs:
-                    if (rx - 1, ry) in cs:
-                        return True
-            for rx, _ in rs:
-                if rx == 0:
-                    return True
-
-        case ">":
-            if cs:
-                for rx, ry in rs:
-                    if (rx + 1, ry) in cs:
-                        return True
-            for rx, _ in rs:
-                if rx == 6:
-                    return True
-
-        case "v":
-            if cs:
-                for rx, ry in rs:
-                    if (rx, ry - 1) in cs:
-                        return True
-            else:
-                for _, ry in rs:
-                    if ry == 0:
-                        return True
-
-        case _:
-            raise ValueError(f"unknown direction: {d}")
-
-    return False
-
-
-def move(rs: set[tuple[int, int]], d: str):
-    # always checks before if it's possible to move
-    match d:
-        case "<":
-            ts = set()
-            for rx, ry in rs:
-                ts.add((rx - 1, ry))
-            rs = ts
-        case ">":
-            ts = set()
-            for rx, ry in rs:
-                ts.add((rx + 1, ry))
-            rs = ts
-        case "v":
-            ts = set()
-            for rx, ry in rs:
-                ts.add((rx, ry - 1))
-            rs = ts
-        case _:
-            raise ValueError(f"unknown direction: {d}")
-
-    return rs
-
-
-def get_max_height(cs: set):
-
-    if not cs:
-        return -1
-    else:
-        return max(y for _, y in cs)
-
-
-def get_skyline(cs) -> set[tuple[str, str]]:
-
-    ymax = get_max_height(cs)
-    ss = set()
-    for i in range(6):
-
-        yis = [y for x, y in cs if x == i]
-        if yis:
-            yi = ymax - max(yis)
+    def update_robots(self, action: str) -> Inventory:
+        new: Inventory = copy.copy(self)
+        if action == GEODE:
+            new.geode += 1
+        elif action == OBSIDIAN:
+            new.obsidian += 1
+        elif action == CLAY:
+            new.clay += 1
+        elif action == ORE:
+            new.ore += 1
         else:
-            yi = -1
-        ss.add((i, yi))
+            raise ValueError(f"Invalidate update: {action}")
 
-    return ss
+        return new
 
-
-def simulate(i, cs, add):
-
-    ymax = get_max_height(cs)
-    ts = ROCKS[i % 5]
-    rs = set()
-    for x, y in ts:
-        rs.add((x + 2, y + (ymax + 4)))
-
-    while True:
-        j, d = next(jets)
-        skyline = get_skyline(cs)
-        if (i % 5, j, frozenset(skyline)) in SKYLINES:
-            i_prev, height_prev = SKYLINES[(i % 5, j, frozenset(skyline))]
-            period = i - i_prev
-            height_diff = ymax - height_prev
-            n_period = (N_ROCKS - i) // period
-            i += n_period * period
-            add += n_period * height_diff
-
+    def update_resources(self, action: str, b: Blueprint) -> Inventory:
+        new: Inventory = copy.copy(self)
+        if action == GEODE:
+            new.ore -= b.geode.ore
+            new.obsidian -= b.geode.obsidian
+        elif action == OBSIDIAN:
+            new.ore -= b.obsidian.ore
+            new.clay -= b.obsidian.clay
+        elif action == CLAY:
+            new.ore -= b.clay.ore
+        elif action == ORE:
+            new.ore -= b.ore.ore
         else:
-            SKYLINES[(i % 5, j, frozenset(skyline))] = (
-                i,
-                get_max_height(cs),
-            )
+            raise ValueError(f"Invalidate update: {action}")
 
-        if not blocked(rs, cs, d):
-            rs = move(rs, d)
+        return new
 
-        if not blocked(rs, cs, "v"):
-            rs = move(rs, "v")
+    def gteqcost(self, cost: Cost) -> bool:
+        if (
+            self.ore >= cost.ore
+            and self.clay >= cost.clay
+            and self.obsidian >= cost.obsidian
+        ):
+            return True
+
+        return False
+
+
+@dataclass(unsafe_hash=True)
+class Cost:
+    ore: int = 0
+    clay: int = 0
+    obsidian: int = 0
+
+
+@dataclass(unsafe_hash=True)
+class Blueprint:
+    id: int
+    ore: Cost
+    clay: Cost
+    obsidian: Cost
+    geode: Cost
+
+    @classmethod
+    def from_input(cls, x: str) -> Blueprint:
+        t = support.ints(x)
+        return cls(
+            id=t[0],
+            ore=Cost(ore=t[1]),
+            clay=Cost(ore=t[2]),
+            obsidian=Cost(ore=t[3], clay=t[4]),
+            geode=Cost(ore=t[5], obsidian=t[6]),
+        )
+
+    @cached_property
+    def max_inventory(self) -> Inventory:
+        """
+        Max resource that can be consumed in any minute
+        """
+        return Inventory(
+            ore=max(
+                self.ore.ore,
+                self.clay.ore,
+                self.obsidian.ore,
+                self.geode.ore,
+            ),
+            clay=max(
+                self.ore.clay,
+                self.clay.clay,
+                self.obsidian.clay,
+                self.geode.clay,
+            ),
+            obsidian=max(
+                self.ore.obsidian,
+                self.clay.obsidian,
+                self.obsidian.obsidian,
+                self.geode.obsidian,
+            ),
+        )
+
+    def is_build_possible(
+        self, resources: Inventory, robots: Inventory, robot: str
+    ) -> bool:
+        """
+        No point building more robots than max resouces that can be consumed
+        at any minute
+        """
+        rmax = self.max_inventory
+
+        if robot == GEODE:
+            if resources.gteqcost(self.geode):
+                return True
+        elif robot == OBSIDIAN:
+            if resources.gteqcost(self.obsidian) and (
+                robots.obsidian < rmax.obsidian
+            ):
+                return True
+        elif robot == CLAY:
+            if resources.gteqcost(self.clay) and robots.clay < rmax.clay:
+                return True
+        elif robot == ORE:
+            if resources.gteqcost(self.ore) and robots.ore < rmax.ore:
+                return True
         else:
-            return (i, cs | rs, add)
+            raise ValueError(f"Invalidate robot: {robot}")
+
+        return False
+
+
+@cache
+def geodes(
+    b: Blueprint, t: int, resources: Inventory, robots: Inventory
+) -> int:
+
+    if t == T:
+        return resources.geode + robots.geode
+
+    # geode
+    if b.is_build_possible(resources, robots, GEODE):
+        new_robots = robots.update_robots(GEODE)
+        new_resources = resources.update_resources(GEODE, b)
+        new_resources = new_resources.add(robots, b, t)
+
+        return geodes(b, t + 1, new_resources, new_robots)
+
+    max_possible_obsidian = resources.obsidian
+    for _t in range(t, T):
+        max_possible_obsidian += robots.obsidian + (_t - t)
+    if max_possible_obsidian < b.geode.obsidian:
+        return resources.geode + robots.geode * (T - (t - 1))
+
+    gs = []
+    # nothing
+    new_robots: Inventory = copy.copy(robots)
+    new_resources = resources.add(robots, b, t)
+    gs.append(geodes(b, t + 1, new_resources, new_robots))
+
+    # obsidian
+    if b.is_build_possible(resources, robots, OBSIDIAN):
+        new_robots = robots.update_robots(OBSIDIAN)
+        new_resources = resources.update_resources(OBSIDIAN, b)
+        new_resources = new_resources.add(robots, b, t)
+        gs.append(geodes(b, t + 1, new_resources, new_robots))
+
+    # clay
+    if b.is_build_possible(resources, robots, CLAY):
+        new_robots = robots.update_robots(CLAY)
+        new_resources = resources.update_resources(CLAY, b)
+        new_resources = new_resources.add(robots, b, t)
+        gs.append(geodes(b, t + 1, new_resources, new_robots))
+
+    # ore
+    if b.is_build_possible(resources, robots, ORE):
+        new_robots = robots.update_robots(ORE)
+        new_resources = resources.update_resources(ORE, b)
+        new_resources = new_resources.add(robots, b, t)
+        gs.append(geodes(b, t + 1, new_resources, new_robots))
+
+    return max(gs)
 
 
 def compute(input: str) -> int:
 
-    global jets
-    jets = cycle(enumerate([x for x in input.splitlines()[0]]))
+    xs = input.splitlines()
+    bs = []
+    for x in xs:
+        b = Blueprint.from_input(x)
+        resources = Inventory()
+        robots = Inventory(ore=1)
+        t = 1
+        bs.append((b, t, resources, robots))
 
-    i = 0
-    cs = set()
-    add = 0
+    with Pool(processes=8) as pool:
+        gs = []
+        for b in bs[:3]:
+            print(b)
+            gs.append(pool.apply_async(geodes, b))
 
-    while i < N_ROCKS:
-        i, cs, add = simulate(i, cs, add)
-        i += 1
+        n = 1
+        for i, g in enumerate(gs):
+            print(f"blueprint: {i}, display quality: {g.get()}")
+            n *= g.get()
 
-    return add + get_max_height(cs) + 1
+    return n
 
 
 INPUT_S = """\
->>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>
+Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
+Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.
 """
-EXPECTED = 1514285714288
+EXPECTED = 62 * 56
 
 
 @pytest.mark.parametrize(
