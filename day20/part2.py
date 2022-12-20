@@ -8,6 +8,7 @@ import pytest
 import support
 
 INPUT_TXT = os.path.join(os.path.dirname(__file__), "input.txt")
+KEY = 811589153
 
 
 def find(e: tuple[int, int], ys: list[tuple[int, int]]):
@@ -78,26 +79,23 @@ def update(p: int, l: int, d: str):
 
 def compute(input: str) -> int:
 
-    xs = [(i, int(x)) for i, x in enumerate(input.splitlines())]
+    xs = [(i, int(x) * KEY) for i, x in enumerate(input.splitlines())]
     ys = xs.copy()
     l = len(xs)
-    for i, x in xs:
-        print(i)
-        p = find((i, x), ys)
-        n = x % (l - 1)
-        for _ in range(n):
-            ys = move((i, x), ys, ">", p)
-            p = update(p, l, ">")
-        # elif x < 0:
-        #         for _ in range(abs(x)):
-        #             ys = move((i, x), ys, "<", p)
-        #             p = update(p, l, "<")
+    for _ in range(10):
+        for i, x in xs:
+            print(i)
+            p = find((i, x), ys)
+            n = x % (l - 1)
+            for _ in range(n):
+                ys = move((i, x), ys, ">", p)
+                p = update(p, l, ">")
 
-        # print(i)
-        # print([y for _, y in ys])
+            # print(i)
+            # print([y for _, y in ys])
 
-        if x == 0:
-            zero = (i, x)
+            if x == 0:
+                zero = (i, x)
 
     p = find(zero, ys)
 
@@ -113,7 +111,7 @@ INPUT_S = """\
 0
 4
 """
-EXPECTED = 3
+EXPECTED = 1623178306
 
 
 @pytest.mark.parametrize(
