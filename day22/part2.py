@@ -47,59 +47,43 @@ FACING = {
 
 
 def wrap(pos, direction):
-
+    """
+    hardcoded for my input, tests don't pass
+    """
     px, py = pos
-    xmax = max(x for x, y in dots | walls if py == y)
-    xmin = min(x for x, y in dots | walls if py == y)
-    ymax = max(y for x, y in dots | walls if px == x)
-    ymin = min(y for x, y in dots | walls if px == x)
-
-    if px == xmax and direction == "R":
-        if 1 <= py <= 50:  # B -> D .
-            assert xmax == 150
-            return 100, 151 - py, "L"
-        elif 51 <= py <= 100:  # C -> B .
-            assert xmax == 100
-            return py + 50, 50, "U"
-        elif 101 <= py <= 150:  # D -> B .
-            assert xmax == 100
-            return 150, 151 - py, "L"
-        elif 151 <= py <= 200:  # F -> D .
-            assert xmax == 50
-            return py - 100, 150, "U"
-    elif px == xmin and direction == "L":
-        if 1 <= py <= 50:  # A -> E .
-            assert xmin == 51
-            return 1, 151 - py, "R"
-        elif 51 <= py <= 100:  # C -> E .
-            assert xmin == 51
-            return py - 50, 101, "D"
-        elif 101 <= py <= 150:  # E -> A .
-            assert xmin == 1
-            return 51, 151 - py, "R"
-        elif 151 <= py <= 200:  # F -> A .
-            assert xmin == 1
-            return py - 100, 1, "D"
-    elif py == ymin and direction == "U":
-        if 1 <= px <= 50:  # E -> C .
-            assert ymin == 101
-            return 51, px + 50, "R"
-        elif 51 <= px <= 100:  # A -> F .
-            assert ymin == 1
-            return 1, px + 100, "R"
-        elif 101 <= px <= 150:  # B -> F .
-            assert ymin == 1
-            return px - 100, 200, "U"
-    elif py == ymax and direction == "D":
-        if 1 <= px <= 50:  # F -> B .
-            assert ymax == 200
-            return px + 100, 1, "D"
-        elif 51 <= px <= 100:  # D -> F .
-            assert ymax == 150
-            return 50, px + 100, "L"
-        elif 101 <= px <= 150:  # B -> C .
-            assert ymax == 50
-            return 100, px - 50, "L"
+    match direction:
+        case "R":
+            if 1 <= py <= 50:  # B -> D .
+                return 100, 151 - py, "L"
+            elif 51 <= py <= 100:  # C -> B .
+                return py + 50, 50, "U"
+            elif 101 <= py <= 150:  # D -> B .
+                return 150, 151 - py, "L"
+            elif 151 <= py <= 200:  # F -> D .
+                return py - 100, 150, "U"
+        case "L":
+            if 1 <= py <= 50:  # A -> E .
+                return 1, 151 - py, "R"
+            elif 51 <= py <= 100:  # C -> E .
+                return py - 50, 101, "D"
+            elif 101 <= py <= 150:  # E -> A .
+                return 51, 151 - py, "R"
+            elif 151 <= py <= 200:  # F -> A .
+                return py - 100, 1, "D"
+        case "U":
+            if 1 <= px <= 50:  # E -> C .
+                return 51, px + 50, "R"
+            elif 51 <= px <= 100:  # A -> F .
+                return 1, px + 100, "R"
+            elif 101 <= px <= 150:  # B -> F .
+                return px - 100, 200, "U"
+        case "D":
+            if 1 <= px <= 50:  # F -> B .
+                return px + 100, 1, "D"
+            elif 51 <= px <= 100:  # D -> F .
+                return 50, px + 100, "L"
+            elif 101 <= px <= 150:  # B -> C .
+                return 100, px - 50, "L"
 
 
 def step(pos: tuple[int, int], direction: str):
@@ -159,7 +143,6 @@ def step(pos: tuple[int, int], direction: str):
 def compute(input: str) -> int:
 
     xs = input.splitlines()
-    n = 0
 
     global dots
     global walls
@@ -185,10 +168,7 @@ def compute(input: str) -> int:
         p, direction = step(p, direction)
 
     prev = direction
-    i = 0
     while paths:
-        i += 1
-
         direction = paths.pop(0)
         distance = paths.pop(0)
         direction = ROTATE[prev][direction]

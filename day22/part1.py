@@ -105,7 +105,6 @@ def move(pos: tuple[int, int], direction: str, distance: int):
 def compute(input: str) -> int:
 
     xs = input.splitlines()
-    n = 0
 
     global dots
     global walls
@@ -129,10 +128,7 @@ def compute(input: str) -> int:
     p = move(start, direction, distance)
 
     prev = direction
-    i = 0
     while paths:
-        i += 1
-
         direction = paths.pop(0)
         distance = paths.pop(0)
         direction = ROTATE[prev][direction]
